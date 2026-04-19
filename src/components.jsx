@@ -271,6 +271,7 @@ export function UserPicker({ farm, onSelect, isMobile }) {
         </div>
         {members.length === 0 && <div style={{ textAlign:"center", padding:"20px 0", color:T.textDim, fontSize:13 }}>No team members yet.<br/><span style={{ color:T.textMuted }}>Add them in Settings.</span></div>}
         <button onClick={()=>onSelect({id:"guest",name:"Guest",role:""})} style={{ width:"100%", padding:"11px", background:"transparent", border:`1px dashed ${T.border}`, borderRadius:12, color:T.textDim, fontSize:13, cursor:"pointer", fontFamily:"DM Sans,sans-serif" }}>Continue as Guest</button>
+        <div style={{ textAlign:"center", marginTop:14, fontSize:11, color:T.textDim, lineHeight:1.7 }}>To add, edit or remove team members,<br/>open the app → <strong style={{color:T.textMuted}}>Settings → Team</strong></div>
       </div>
     </div>
   );
@@ -279,7 +280,7 @@ export function UserPicker({ farm, onSelect, isMobile }) {
 // ════════════════════════════════════════════════════════════════════════════
 //  SETTINGS
 // ════════════════════════════════════════════════════════════════════════════
-export function Settings({ farm, setFarm, setCurrentUser, currentUser, bp }) {
+export function Settings({ farm, setFarm, setCurrentUser, currentUser, bp, onResetFarm }) {
   const isMobile = bp === "mobile";
   const [local, setLocal]     = useState(() => JSON.parse(JSON.stringify(farm)));
   const [stab, setStab]       = useState("farm");
@@ -392,15 +393,30 @@ export function Settings({ farm, setFarm, setCurrentUser, currentUser, bp }) {
       {/* Team */}
       {stab==="team" && <Card>
         <SLabel t="Team Members"/>
-        {local.teamMembers.map(m => (
-          <div key={m.id} style={{ display:"grid", gridTemplateColumns:"1fr 1fr auto", gap:8, marginBottom:8, alignItems:"center" }}>
-            <input value={m.name} onChange={e=>updMember(m.id,"name",e.target.value)} placeholder="Name" style={inp}/>
-            <input value={m.role} onChange={e=>updMember(m.id,"role",e.target.value)} placeholder="Role" style={inp}/>
-            <button onClick={()=>removeMember(m.id)} style={{ background:"transparent", border:`1px solid ${T.border}`, color:T.textDim, cursor:"pointer", borderRadius:8, padding:"9px 11px", fontSize:14 }}>×</button>
+        <div style={{ fontSize:12, color:T.textMuted, marginBottom:14, background:T.accentDim, border:`1px solid ${T.accent}33`, borderRadius:8, padding:"9px 12px", lineHeight:1.6 }}>
+          ◈ Edit names and roles below — changes appear in the user picker on all devices after saving.
+        </div>
+        {local.teamMembers.length === 0 && <div style={{ color:T.textDim, fontSize:13, marginBottom:12 }}>No team members yet. Add one below.</div>}
+        {local.teamMembers.map((m, i) => (
+          <div key={m.id} style={{ background:T.surfaceHover, border:`1px solid ${T.border}`, borderRadius:10, padding:"12px 14px", marginBottom:8 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+              <div style={{ fontSize:11, color:T.textMuted, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em" }}>Member {i+1}</div>
+              <button onClick={()=>removeMember(m.id)} style={{ background:T.redDim, border:`1px solid ${T.red}44`, color:T.red, cursor:"pointer", borderRadius:6, padding:"4px 10px", fontSize:11, fontFamily:"DM Sans,sans-serif", fontWeight:600 }}>Remove</button>
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+              <div>
+                <div style={{ fontSize:11, color:T.textMuted, marginBottom:4, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em" }}>Name</div>
+                <input value={m.name} onChange={e=>updMember(m.id,"name",e.target.value)} placeholder="e.g. Sarah" style={inp}/>
+              </div>
+              <div>
+                <div style={{ fontSize:11, color:T.textMuted, marginBottom:4, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em" }}>Role</div>
+                <input value={m.role} onChange={e=>updMember(m.id,"role",e.target.value)} placeholder="e.g. Farm Manager" style={inp}/>
+              </div>
+            </div>
           </div>
         ))}
-        <Btn onClick={addMember} variant="ghost" size="sm" style={{ marginTop:4 }}>+ Add Team Member</Btn>
-        <div style={{ fontSize:11, color:T.textDim, marginTop:10 }}>Team members appear in the user picker on each device and in all field log entries.</div>
+        <Btn onClick={addMember} variant="primary" size="sm" style={{ marginTop:4 }}>+ Add Team Member</Btn>
+        <div style={{ fontSize:11, color:T.textDim, marginTop:10 }}>Remember to tap <strong style={{color:T.textMuted}}>Save All</strong> after making changes.</div>
       </Card>}
 
       {/* Thresholds */}
@@ -448,6 +464,44 @@ export function Settings({ farm, setFarm, setCurrentUser, currentUser, bp }) {
           ))}
         </div>
       </Card>}
+
+      {/* Reset Farm */}
+      <ResetFarmCard onResetFarm={onResetFarm}/>
     </div>
+  );
+}
+
+function ResetFarmCard({ onResetFarm }) {
+  const [confirm, setConfirm] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  async function doReset() {
+    setResetting(true);
+    await onResetFarm();
+    setResetting(false);
+  }
+  return (
+    <Card style={{ border:`1px solid ${T.red}33` }}>
+      <SLabel t="Danger Zone"/>
+      {!confirm ? (
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
+          <div>
+            <div style={{ fontSize:13, fontWeight:500, color:T.text, marginBottom:3 }}>Reset Farm</div>
+            <div style={{ fontSize:11, color:T.textDim, lineHeight:1.6 }}>Deletes all farm data, logs, photos and activity history from Supabase. This device will return to the setup screen. Cannot be undone.</div>
+          </div>
+          <button onClick={()=>setConfirm(true)} style={{ background:T.redDim, border:`1px solid ${T.red}44`, color:T.red, borderRadius:8, padding:"8px 16px", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"DM Sans,sans-serif", flexShrink:0 }}>Reset…</button>
+        </div>
+      ) : (
+        <div>
+          <div style={{ background:T.redDim, border:`1px solid ${T.red}44`, borderRadius:10, padding:"12px 14px", marginBottom:14 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:T.red, marginBottom:4 }}>⚠ Are you absolutely sure?</div>
+            <div style={{ fontSize:12, color:T.red, lineHeight:1.6, opacity:0.8 }}>This will permanently delete all farm config, field logs, farm data, photos and activity status from Supabase. Every device using this app will be reset. This cannot be undone.</div>
+          </div>
+          <div style={{ display:"flex", gap:8 }}>
+            <button onClick={doReset} disabled={resetting} style={{ background:T.red, border:"none", color:"#fff", borderRadius:8, padding:"9px 18px", fontSize:13, fontWeight:700, cursor:resetting?"not-allowed":"pointer", fontFamily:"DM Sans,sans-serif", opacity:resetting?0.6:1 }}>{resetting?"Resetting…":"Yes, delete everything"}</button>
+            <button onClick={()=>setConfirm(false)} style={{ background:"transparent", border:`1px solid ${T.border}`, color:T.textMuted, borderRadius:8, padding:"9px 16px", fontSize:13, cursor:"pointer", fontFamily:"DM Sans,sans-serif" }}>Cancel</button>
+          </div>
+        </div>
+      )}
+    </Card>
   );
 }

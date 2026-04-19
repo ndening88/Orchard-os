@@ -238,6 +238,21 @@ export default function App() {
     setPhotos(p=>[saved,...p]);setPhotoF({caption:"",date:"",block:"",emoji:""});setPhotoFile(null);setPreview(null);setShowForm(null);setUploading(false);setSync("synced");
   }
 
+  async function resetFarm() {
+    try {
+      await Promise.all([
+        sb.from("farm_config").delete().eq("id","main"),
+        sb.from("field_logs").delete().not("id","is",null),
+        sb.from("farm_data").delete().not("id","is",null),
+        sb.from("photos").delete().not("id","is",null),
+        sb.from("activity_status").delete().not("act_id","is",null),
+      ]);
+    } catch(e) { console.warn("Supabase reset error:", e); }
+    localStorage.removeItem("orchardos_farm");
+    localStorage.removeItem("orchardos_user");
+    window.location.reload();
+  }
+
   const done=acts.filter(a=>a.status==="done").length;
   const inProg=acts.filter(a=>a.status==="in_progress").length;
   const urgent=acts.filter(a=>a.priority==="high"&&a.status==="pending").length;
@@ -519,17 +534,32 @@ export default function App() {
                 <SLabel t="Events"/>
                 {(calEvents[selDay]||[]).length===0?<div style={{color:T.textDim,fontSize:12}}>No events.</div>:(calEvents[selDay]||[]).map((ev,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${T.border}`}}><Dot color={ev.color}/><span style={{fontSize:12,color:T.text,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ev.label}</span><Chip color={ev.color} dim={`${ev.color}22`} small>{ev.type==="log"?"Log":"Task"}</Chip></div>)}
               </Card>}
-              {!isMobile&&<Card style={{padding:16}}><SLabel t="Schedule Activities"/>
-                <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                  {acts.filter(a=>!a.scheduledDate&&a.status!=="done").slice(0,5).map(a=>(
-                    <div key={a.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:T.surfaceHover,borderRadius:8,border:`1px solid ${T.border}`}}>
-                      <span style={{fontSize:14}}>{a.icon}</span><span style={{fontSize:12,color:T.text,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.name}</span>
-                      <Chip color={SEASON_META[a.season].color} dim={SEASON_META[a.season].dim} small>{a.season}</Chip>
-                      <input type="date" onChange={e=>{if(e.target.value){setActs(p=>p.map(x=>x.id===a.id?{...x,scheduledDate:e.target.value}:x));sbSaveActStatus(a.id,{...a,scheduledDate:e.target.value},currentUser?.name);}}} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:6,padding:"4px 6px",color:T.textMuted,fontSize:11,fontFamily:"DM Sans,sans-serif",outline:"none"}}/>
+              <Card style={{padding:isMobile?14:16}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                  <SLabel t="Schedule Tasks" style={{margin:0,padding:0,border:"none"}}/>
+                  <span style={{fontSize:11,color:T.textDim}}>{acts.filter(a=>a.status!=="done").length} pending</span>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                  {acts.filter(a=>a.status!=="done").slice(0,8).map(a=>(
+                    <div key={a.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:a.scheduledDate?T.accentDim:T.surfaceHover,borderRadius:8,border:`1px solid ${a.scheduledDate?T.accent+"44":T.border}`}}>
+                      <span style={{fontSize:14,flexShrink:0}}>{a.icon}</span>
+                      <span style={{fontSize:12,color:T.text,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.name}</span>
+                      {a.scheduledDate&&<span style={{fontSize:10,color:T.accent,fontFamily:"DM Mono,monospace",flexShrink:0}}>{a.scheduledDate}</span>}
+                      <input
+                        type="date"
+                        value={a.scheduledDate||""}
+                        onChange={e=>{
+                          const val=e.target.value;
+                          setActs(p=>p.map(x=>x.id===a.id?{...x,scheduledDate:val}:x));
+                          sbSaveActStatus(a.id,{...a,scheduledDate:val},currentUser?.name);
+                        }}
+                        style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:6,padding:"4px 6px",color:T.textMuted,fontSize:11,fontFamily:"DM Sans,sans-serif",outline:"none",flexShrink:0,width:isMobile?100:120}}
+                      />
                     </div>
                   ))}
+                  {acts.filter(a=>a.status!=="done").length===0&&<div style={{color:T.textDim,fontSize:12}}>All tasks complete! 🎉</div>}
                 </div>
-              </Card>}
+              </Card>
             </div>
           )}
 
@@ -719,7 +749,7 @@ export default function App() {
           )}
 
           {/* SETTINGS */}
-          {tab==="settings"&&<Settings farm={farm} setFarm={setFarm} setCurrentUser={setCurrentUser} currentUser={currentUser} bp={bp}/>}
+          {tab==="settings"&&<Settings farm={farm} setFarm={setFarm} setCurrentUser={setCurrentUser} currentUser={currentUser} bp={bp} onResetFarm={resetFarm}/>}
 
         </div>
       </main>
