@@ -12,19 +12,11 @@ export const AVATAR_COLORS = [T.accent, T.blue, T.purple, T.orange, T.yellow];
 
 // ── Farm defaults ─────────────────────────────────────────────────────────
 export const DEFAULT_FARM = {
-  name:"My Walnut Farm", ownerName:"", location:"West Auckland, New Zealand",
+  name:"", ownerName:"", location:"",
   lat:-36.87, lon:174.63, timezone:"Pacific/Auckland", totalHectares:"", established:"",
-  blocks:[
-    { id:"b1", name:"Chandler North", hectares:"", variety:"Chandler", notes:"" },
-    { id:"b2", name:"Chandler South", hectares:"", variety:"Chandler", notes:"" },
-    { id:"b3", name:"Howard Block",   hectares:"", variety:"Howard",   notes:"" },
-    { id:"b4", name:"Mixed Block",    hectares:"", variety:"Mixed",    notes:"" },
-  ],
-  varieties:["Chandler","Howard"],
-  teamMembers:[
-    { id:"t1", name:"Sarah", role:"Farm Manager" },
-    { id:"t2", name:"Tom",   role:"Operations" },
-  ],
+  blocks:[],
+  varieties:[],
+  teamMembers:[],
   sprayDryWindowHours:4, pestThreshold:15, irrigationTargetMin:35, irrigationTargetMax:65,
   soilPhMin:6.0, soilPhMax:7.0, harvestHullSplitPct:10,
   notifications:{ urgentTasks:true, weatherAlerts:true, weeklyBriefing:true },

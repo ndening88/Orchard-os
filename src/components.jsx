@@ -110,11 +110,20 @@ export function Onboarding({ onComplete, isMobile }) {
   function removeMember(id)    { setFarm(f=>({...f,teamMembers:f.teamMembers.filter(m=>m.id!==id)})); }
   async function launch()      { setSaving(true); const f={...farm,onboarded:true}; LS.saveFarm(f); await sbSaveFarm(f); onComplete(f); }
 
+  // Validation — what's required to advance from each step
+  const stepErrors = {
+    1: !farm.name.trim()        ? "Farm name is required." :
+       !farm.location.trim()    ? "Please select your region." : null,
+    3: farm.teamMembers.filter(m=>m.name.trim()).length === 0
+                                ? "Add at least one team member so you can log in." : null,
+  };
+  const canAdvance = !stepErrors[step];
+
   const steps = [
     { title:"Welcome to Orchard OS", sub:"Set up your walnut farm in 2 minutes.", icon:"🌰" },
     { title:"Your Farm",             sub:"Tell us about the farm.",                icon:"🏡" },
     { title:"Orchard Blocks",        sub:"Define your blocks for per-block tracking.", icon:"🗺️" },
-    { title:"Your Team",             sub:"Add people who work on the farm.",        icon:"👥" },
+    { title:"Your Team",             sub:"Add at least one person who will use the app.", icon:"👥" },
     { title:"Alert Thresholds",      sub:"Set target ranges for smart alerts.",     icon:"⚙️" },
     { title:"All set!",              sub:"Your farm profile is ready.",             icon:"✅" },
   ];
@@ -155,9 +164,16 @@ export function Onboarding({ onComplete, isMobile }) {
 
           {/* Step 1 — Farm basics */}
           {step===1 && <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-            <Field label="Farm Name *" value={farm.name} onChange={v=>up("name",v)} placeholder="e.g. Te Awamutu Walnut Farm"/>
+            <div style={{ fontSize:11, color:T.textDim, marginBottom:2 }}>Fields marked <span style={{color:T.red}}>*</span> are required.</div>
+            <div>
+              <Field label="Farm Name" value={farm.name} onChange={v=>up("name",v)} placeholder="e.g. Riverside Walnut Farm"/>
+              {!farm.name.trim() && <div style={{ fontSize:11, color:T.red, marginTop:4 }}>⚠ Required</div>}
+            </div>
             <Field label="Your Name" value={farm.ownerName} onChange={v=>up("ownerName",v)} placeholder="e.g. Sarah Mitchell"/>
-            <Field label="Region" value={farm.location} onChange={v=>up("location",v)} options={NZ_REGIONS}/>
+            <div>
+              <Field label="Region" value={farm.location} onChange={v=>up("location",v)} options={NZ_REGIONS}/>
+              {!farm.location.trim() && <div style={{ fontSize:11, color:T.red, marginTop:4 }}>⚠ Required — used for weather forecasts and AI advice</div>}
+            </div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
               <Field label="Size (ha)" type="number" value={farm.totalHectares} onChange={v=>up("totalHectares",v)} placeholder="e.g. 12"/>
               <Field label="Est. Year"  type="number" value={farm.established}   onChange={v=>up("established",v)}   placeholder="e.g. 2008"/>
@@ -189,6 +205,12 @@ export function Onboarding({ onComplete, isMobile }) {
 
           {/* Step 3 — Team */}
           {step===3 && <div>
+            {farm.teamMembers.length === 0 && (
+              <div style={{ textAlign:"center", padding:"16px 0 20px", color:T.textDim, fontSize:13, lineHeight:1.7 }}>
+                No team members yet.<br/>
+                <span style={{ fontSize:12 }}>Add yourself and anyone else who logs farm activity.</span>
+              </div>
+            )}
             {farm.teamMembers.map(m => (
               <div key={m.id} style={{ display:"grid", gridTemplateColumns:"1fr 1fr auto", gap:8, marginBottom:8, alignItems:"center" }}>
                 <input value={m.name} onChange={e=>updMember(m.id,"name",e.target.value)} placeholder="Name" style={inp}/>
@@ -196,7 +218,10 @@ export function Onboarding({ onComplete, isMobile }) {
                 <button onClick={()=>removeMember(m.id)} style={{ background:"transparent", border:`1px solid ${T.border}`, color:T.textDim, cursor:"pointer", borderRadius:8, padding:"8px 10px", fontSize:14 }}>×</button>
               </div>
             ))}
-            <Btn onClick={addMember} variant="ghost" size="sm" style={{ marginTop:4 }}>+ Add member</Btn>
+            <Btn onClick={addMember} variant="primary" size="sm" style={{ marginTop:4 }}>+ Add member</Btn>
+            <div style={{ fontSize:11, color:T.textDim, marginTop:10, lineHeight:1.6 }}>
+              At least one member is required — this is who appears on the login screen. Add yourself first, then anyone else who will use the app.
+            </div>
           </div>}
 
           {/* Step 4 — Thresholds */}
@@ -215,20 +240,33 @@ export function Onboarding({ onComplete, isMobile }) {
           {/* Step 5 — Done */}
           {step===5 && <div style={{ textAlign:"center" }}>
             <div style={{ background:T.accentDim, border:`1px solid ${T.accent}44`, borderRadius:12, padding:"14px 18px", marginBottom:14 }}>
-              <div style={{ fontSize:14, fontWeight:600, color:T.accent, marginBottom:4 }}>{farm.name}</div>
-              <div style={{ fontSize:12, color:T.textMuted }}>{farm.location} · {farm.blocks.length} block{farm.blocks.length!==1?"s":""} · {farm.teamMembers.filter(m=>m.name).length} team member{farm.teamMembers.filter(m=>m.name).length!==1?"s":""}</div>
+              <div style={{ fontSize:14, fontWeight:600, color:T.accent, marginBottom:6 }}>{farm.name||"Your Farm"}</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                {farm.location&&<div style={{ fontSize:12, color:T.textMuted }}>{farm.location}</div>}
+                {farm.blocks.length>0&&<div style={{ fontSize:12, color:T.textMuted }}>{farm.blocks.length} block{farm.blocks.length!==1?"s":""}: {farm.blocks.map(b=>b.name).join(", ")}</div>}
+                {farm.teamMembers.filter(m=>m.name).length>0&&<div style={{ fontSize:12, color:T.textMuted }}>{farm.teamMembers.filter(m=>m.name).length} team member{farm.teamMembers.filter(m=>m.name).length!==1?"s":""}: {farm.teamMembers.filter(m=>m.name).map(m=>m.name).join(", ")}</div>}
+                {farm.totalHectares&&<div style={{ fontSize:12, color:T.textMuted }}>{farm.totalHectares} ha total</div>}
+              </div>
             </div>
             <div style={{ display:"flex", alignItems:"center", gap:6, justifyContent:"center", fontSize:12, color:T.accent, marginBottom:8 }}>
-              <Dot color={T.accent}/>Data will sync across all devices via Supabase
+              <Dot color={T.accent}/>Data syncs across all devices via Supabase
             </div>
+            <div style={{ fontSize:11, color:T.textDim, lineHeight:1.7 }}>Everything can be updated anytime in <strong style={{color:T.textMuted}}>Settings</strong>.</div>
           </div>}
 
+          {/* Validation error */}
+          {stepErrors[step] && (
+            <div style={{ display:"flex", alignItems:"center", gap:8, background:T.redDim, border:`1px solid ${T.red}44`, borderRadius:8, padding:"9px 12px", marginTop:16, fontSize:12, color:T.red }}>
+              <span style={{ flexShrink:0 }}>⚠</span><span>{stepErrors[step]}</span>
+            </div>
+          )}
+
           {/* Nav */}
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:22, paddingTop:16, borderTop:`1px solid ${T.border}` }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:16, paddingTop:16, borderTop:`1px solid ${T.border}` }}>
             <Btn onClick={()=>setStep(s=>s-1)} variant="ghost" disabled={step===0}>← Back</Btn>
             <div style={{ display:"flex", gap:5 }}>{steps.map((_,i)=><div key={i} style={{ width:i===step?18:7, height:7, borderRadius:4, background:i===step?T.accent:i<step?T.accentMuted:T.border, transition:"all .2s" }}/>)}</div>
             {step < steps.length-1
-              ? <Btn onClick={()=>setStep(s=>s+1)}>Continue →</Btn>
+              ? <Btn onClick={()=>{ if(canAdvance||!stepErrors[step]) setStep(s=>s+1); }} disabled={!canAdvance && stepErrors[step]!==undefined && stepErrors[step]!==null}>Continue →</Btn>
               : <Btn onClick={launch} disabled={saving}>{saving?"Saving…":"Launch →"}</Btn>
             }
           </div>
