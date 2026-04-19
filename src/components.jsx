@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { T, SEASON_META, PRI_META, CAT_META, AVATAR_COLORS, DEFAULT_FARM,
          NZ_REGIONS, WALNUT_VARIETIES, ACT_TEMPLATES, DATA_TYPES,
-         initials, userColor, getDataAlert, LS } from "./constants.js";
+         initials, userColor, getDataAlert, LS, getRegionDefaults } from "./constants.js";
 import { sbSaveFarm } from "./supabase.js";
 
 // ── Primitives ────────────────────────────────────────────────────────────
@@ -171,8 +171,30 @@ export function Onboarding({ onComplete, isMobile }) {
             </div>
             <Field label="Your Name" value={farm.ownerName} onChange={v=>up("ownerName",v)} placeholder="e.g. Sarah Mitchell"/>
             <div>
-              <Field label="Region" value={farm.location} onChange={v=>up("location",v)} options={NZ_REGIONS}/>
+              <Field label="Region" value={farm.location} onChange={v=>{
+                if(v){
+                  const d=getRegionDefaults(v);
+                  setFarm(f=>({...f,
+                    location:v,
+                    lat:d.lat, lon:d.lon, timezone:d.timezone,
+                    soilPhMin:d.soilPhMin, soilPhMax:d.soilPhMax,
+                    irrigationTargetMin:d.irrigationTargetMin, irrigationTargetMax:d.irrigationTargetMax,
+                    pestThreshold:d.pestThreshold, harvestHullSplitPct:d.harvestHullSplitPct,
+                    sprayDryWindowHours:d.sprayDryWindowHours,
+                  }));
+                } else {
+                  setFarm(f=>({...f, location:""}));
+                }
+              }} options={NZ_REGIONS}/>
               {!farm.location.trim() && <div style={{ fontSize:11, color:T.red, marginTop:4 }}>⚠ Required — used for weather forecasts and AI advice</div>}
+              {farm.location && (()=>{
+                const d=getRegionDefaults(farm.location);
+                return <div style={{ marginTop:8, background:T.accentDim, border:`1px solid ${T.accent}33`, borderRadius:8, padding:"9px 12px", fontSize:11, color:T.textMuted, lineHeight:1.7 }}>
+                  <div style={{ fontWeight:600, color:T.accent, marginBottom:4 }}>◈ Defaults applied for {farm.location.split(",")[0]}</div>
+                  <div>pH target: {d.soilPhMin}–{d.soilPhMax} · Moisture: {d.irrigationTargetMin}–{d.irrigationTargetMax}% · Pest threshold: {d.pestThreshold}/wk</div>
+                  {d.note && <div style={{ marginTop:4, color:T.textDim }}>{d.note}</div>}
+                </div>;
+              })()}
             </div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
               <Field label="Size (ha)" type="number" value={farm.totalHectares} onChange={v=>up("totalHectares",v)} placeholder="e.g. 12"/>
@@ -385,7 +407,32 @@ export function Settings({ farm, setFarm, setCurrentUser, currentUser, bp, onRes
         <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:12, marginBottom:16 }}>
           <Field label="Farm Name"       value={local.name}          onChange={v=>up("name",v)}/>
           <Field label="Owner Name"      value={local.ownerName}     onChange={v=>up("ownerName",v)}     placeholder="Your name"/>
-          <Field label="Region"          value={local.location}      onChange={v=>up("location",v)}      options={NZ_REGIONS}/>
+          <div>
+            <Field label="Region" value={local.location} onChange={v=>{
+              if(v){
+                const d=getRegionDefaults(v);
+                setLocal(f=>({...f, location:v, lat:d.lat, lon:d.lon, timezone:d.timezone}));
+              } else {
+                setLocal(f=>({...f, location:""}));
+              }
+            }} options={NZ_REGIONS}/>
+            {local.location && (()=>{
+              const d=getRegionDefaults(local.location);
+              return <div style={{ marginTop:8, display:"flex", alignItems:"flex-start", gap:10, background:T.surfaceHover, border:`1px solid ${T.border}`, borderRadius:8, padding:"9px 12px" }}>
+                <div style={{ flex:1, fontSize:11, color:T.textMuted, lineHeight:1.7 }}>
+                  <span style={{ fontWeight:600, color:T.text }}>Region defaults: </span>
+                  pH {d.soilPhMin}–{d.soilPhMax}, moisture {d.irrigationTargetMin}–{d.irrigationTargetMax}%, pest {d.pestThreshold}/wk
+                  {d.note&&<div style={{ color:T.textDim, marginTop:2 }}>{d.note}</div>}
+                </div>
+                <button onClick={()=>setLocal(f=>({...f,
+                  soilPhMin:d.soilPhMin, soilPhMax:d.soilPhMax,
+                  irrigationTargetMin:d.irrigationTargetMin, irrigationTargetMax:d.irrigationTargetMax,
+                  pestThreshold:d.pestThreshold, harvestHullSplitPct:d.harvestHullSplitPct,
+                  sprayDryWindowHours:d.sprayDryWindowHours,
+                }))} style={{ background:T.accentDim, border:`1px solid ${T.accent}44`, color:T.accent, borderRadius:6, padding:"5px 10px", fontSize:11, cursor:"pointer", fontFamily:"DM Sans,sans-serif", fontWeight:600, flexShrink:0, whiteSpace:"nowrap" }}>Apply defaults</button>
+              </div>;
+            })()}
+          </div>
           <Field label="Total Area (ha)" type="number" value={local.totalHectares} onChange={v=>up("totalHectares",v)} placeholder="e.g. 12"/>
           <Field label="Year Est."       type="number" value={local.established}   onChange={v=>up("established",v)}   placeholder="e.g. 2008"/>
         </div>
