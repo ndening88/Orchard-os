@@ -88,8 +88,18 @@ export default function App() {
   const [farm,setFarmState]=useState(()=>LS.farm());
   const [currentUser,setCU]=useState(()=>LS.user());
   const [syncStatus,setSync]=useState("idle");
+  const [farmLoaded,setFarmLoaded]=useState(false);
   function setFarm(f){setFarmState(f);LS.saveFarm(f);}
   function setCurrentUser(u){setCU(u);LS.saveUser(u);}
+
+  // Load farm from Supabase first so user picker shows real team members
+  useEffect(()=>{
+    async function loadFarmFirst(){
+      try{const remote=await sbLoadFarm();if(remote?.onboarded){setFarmState(remote);LS.saveFarm(remote);}}catch{}
+      setFarmLoaded(true);
+    }
+    loadFarmFirst();
+  },[]);
   const [acts,setActs]=useState(()=>ACT_TEMPLATES.map(t=>({...t,status:"pending",scheduledDate:"",assignee:"",notes:""})));
   const [logs,setLogs]=useState([]); const [dataE,setDataE]=useState([]); const [photos,setPhotos]=useState([]); const [dbLoaded,setLoaded]=useState(false);
   const [tab,setTab]=useState("dashboard");
@@ -250,6 +260,12 @@ export default function App() {
   const twoCol=isMobile?"1fr":"1fr 1fr";
   const threeCol=isMobile?"1fr 1fr":"repeat(3,1fr)";
 
+  // Wait for farm to load from Supabase before showing anything
+  if(!farmLoaded)return(
+    <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"DM Sans,sans-serif"}}>
+      <div style={{textAlign:"center"}}><div style={{fontSize:40,marginBottom:16}}>🌰</div><div style={{fontSize:14,color:T.textMuted,marginBottom:8}}>Connecting…</div><div style={{display:"flex",gap:5,justifyContent:"center"}}>{[0,1,2].map(i=><div key={i} style={{width:8,height:8,borderRadius:"50%",background:T.accent,animation:`blink 1.2s ${i*0.2}s infinite`}}/>)}</div></div>
+    </div>
+  );
   if(!farm.onboarded)return<Onboarding onComplete={f=>{setFarmState(f);LS.saveFarm(f);}} isMobile={isMobile}/>;
   if(!currentUser)return<UserPicker farm={farm} onSelect={u=>{LS.saveUser(u);setCU(u);}} isMobile={isMobile}/>;
   if(!dbLoaded)return(
@@ -273,7 +289,7 @@ export default function App() {
         </div>
         {isTablet&&<button onClick={()=>setSidebarOpen(false)} style={{background:"transparent",border:"none",color:T.textMuted,cursor:"pointer",fontSize:20,padding:"2px 4px",marginLeft:4}}>×</button>}
       </div>
-      {urgent>0&&<div style={{margin:"0 12px 10px",background:T.redDim,border:`1px solid ${T.red}44`,borderRadius:8,padding:"7px 10px",fontSize:11,color:T.red,fontWeight:600,display:"flex",gap:6}}>⚠ {urgent} urgent</div>}
+      {urgent>0&&<div onClick={()=>{setTab("activities");setFStatus("pending");if(isTablet)setSidebarOpen(false);}} style={{margin:"0 12px 10px",background:T.redDim,border:`1px solid ${T.red}44`,borderRadius:8,padding:"7px 10px",fontSize:11,color:T.red,fontWeight:600,display:"flex",gap:6,cursor:"pointer",alignItems:"center"}}>⚠ {urgent} urgent task{urgent>1?"s":""} — tap to view</div>}
       <div style={{padding:"0 8px",flex:1}}>
         {TABS.map(t=>(
           <button key={t.id} onClick={()=>{setTab(t.id);if(isTablet)setSidebarOpen(false);}} style={{width:"100%",display:"flex",alignItems:"center",gap:9,padding:"8px 10px",background:tab===t.id?T.accentDim:"transparent",color:tab===t.id?T.accent:T.textMuted,border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:tab===t.id?600:400,fontFamily:"DM Sans,sans-serif",textAlign:"left",marginBottom:1,transition:"all .1s"}}>
@@ -313,7 +329,7 @@ export default function App() {
         <div style={{fontSize:13,fontWeight:700,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{farm.name}</div>
         <div style={{fontSize:10,color:T.textMuted,display:"flex",alignItems:"center",gap:6}}><span>{TABS.find(t=>t.id===tab)?.label||""}</span><SyncDot status={syncStatus}/></div>
       </div>
-      {urgent>0&&<div style={{background:T.redDim,border:`1px solid ${T.red}44`,borderRadius:6,padding:"3px 8px",fontSize:10,color:T.red,fontWeight:700,flexShrink:0}}>⚠ {urgent}</div>}
+      {urgent>0&&<div onClick={()=>{setTab("activities");setFStatus("pending");setShowMore(false);}} style={{background:T.redDim,border:`1px solid ${T.red}44`,borderRadius:6,padding:"3px 8px",fontSize:10,color:T.red,fontWeight:700,flexShrink:0,cursor:"pointer"}}>⚠ {urgent}</div>}
       {(()=>{const w=weather[todayStr];if(!w)return null;const wmo=wmoLabel(w.code);return<div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}><span style={{fontSize:16}}>{wmo.icon}</span><span style={{fontSize:11,color:T.textMuted,fontWeight:600}}>{w.tmax}°</span></div>;})()}
       <div onClick={()=>setCurrentUser(null)} style={{width:28,height:28,borderRadius:8,background:`${uColor}22`,border:`1px solid ${uColor}44`,display:"grid",placeItems:"center",fontSize:11,fontWeight:700,color:uColor,cursor:"pointer",flexShrink:0,fontFamily:"DM Mono,monospace"}}>{initials(currentUser.name)}</div>
     </div>
@@ -325,7 +341,7 @@ export default function App() {
       <div style={{width:28,height:28,background:T.accentDim,border:`1px solid ${T.accent}33`,borderRadius:8,display:"grid",placeItems:"center",fontSize:14,flexShrink:0}}>🌰</div>
       <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:T.text}}>{farm.name}</div></div>
       <SyncDot status={syncStatus}/>
-      {urgent>0&&<div style={{background:T.redDim,border:`1px solid ${T.red}44`,borderRadius:6,padding:"3px 8px",fontSize:10,color:T.red,fontWeight:700}}>⚠ {urgent}</div>}
+      {urgent>0&&<div onClick={()=>{setTab("activities");setFStatus("pending");setSidebarOpen(false);}} style={{background:T.redDim,border:`1px solid ${T.red}44`,borderRadius:6,padding:"3px 8px",fontSize:10,color:T.red,fontWeight:700,cursor:"pointer"}}>⚠ {urgent}</div>}
       {(()=>{const w=weather[todayStr];if(!w)return null;const wmo=wmoLabel(w.code);return<div style={{display:"flex",alignItems:"center",gap:4}}><span style={{fontSize:16}}>{wmo.icon}</span><span style={{fontSize:11,color:T.textMuted,fontWeight:600}}>{w.tmax}°/{w.tmin}°</span></div>;})()}
     </div>
   );
@@ -388,8 +404,8 @@ export default function App() {
               </div>
               {(briefing||briefLoad)&&<Card style={{border:`1px solid ${T.accent}44`,background:"linear-gradient(135deg,#162820,#0d1117)",padding:isMobile?14:20}}><div style={{fontSize:11,color:T.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>◈ Daily Briefing</div><AiInsight text={briefing} loading={briefLoad} color={T.accent}/></Card>}
               <div style={{display:"grid",gridTemplateColumns:statGrid,gap:10}}>
-                {[{label:"Done",val:done,sub:`of ${acts.length}`,color:T.accent},{label:"In Progress",val:inProg,sub:"activities",color:T.yellow},{label:"Urgent",val:urgent,sub:"high priority",color:T.red},{label:"Logs",val:logs.length,sub:"total entries",color:T.blue}].map(s=>(
-                  <Card key={s.label} style={{padding:isMobile?"12px 14px":16}}>
+                {[{label:"Done",val:done,sub:`of ${acts.length}`,color:T.accent,click:null},{label:"In Progress",val:inProg,sub:"activities",color:T.yellow,click:()=>{setTab("activities");setFStatus("in_progress");}},{label:"Urgent",val:urgent,sub:"high priority",color:T.red,click:()=>{setTab("activities");setFStatus("pending");}},{label:"Logs",val:logs.length,sub:"total entries",color:T.blue,click:()=>setTab("logs")}].map(s=>(
+                  <Card key={s.label} onClick={s.click||undefined} style={{padding:isMobile?"12px 14px":16,cursor:s.click?"pointer":undefined}}>
                     <div style={{fontSize:isMobile?24:28,fontWeight:700,color:s.color,fontFamily:"DM Mono,monospace",lineHeight:1}}>{s.val}</div>
                     <div style={{fontSize:isMobile?11:12,color:T.text,fontWeight:500,marginTop:5}}>{s.label}</div>
                     <div style={{fontSize:10,color:T.textDim,marginTop:2}}>{s.sub}</div>

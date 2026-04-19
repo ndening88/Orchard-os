@@ -64,7 +64,19 @@ export const CAT_META = {
   "Harvest":      { icon:"🚜",  color:T.orange,   dim:T.orangeDim },
 };
 
-export const NZ_REGIONS = ["Northland","Auckland / West Auckland","Waikato","Bay of Plenty","Gisborne / Hawke's Bay","Manawatū-Whanganui","Nelson / Marlborough","Canterbury","Otago","Southland","Other"];
+export const REGIONS = [
+  // New Zealand
+  "Northland, NZ","Auckland / West Auckland, NZ","Waikato, NZ","Bay of Plenty, NZ",
+  "Gisborne / Hawke's Bay, NZ","Manawatū-Whanganui, NZ","Nelson / Marlborough, NZ",
+  "Canterbury, NZ","Otago, NZ","Southland, NZ",
+  // Australia
+  "Tasmania, Australia","Victoria, Australia","New South Wales, Australia",
+  "South Australia, Australia","Western Australia, Australia","Queensland, Australia",
+  // Other
+  "Other",
+];
+// Keep old name as alias so existing imports don't break
+export const NZ_REGIONS = REGIONS;
 export const WALNUT_VARIETIES = ["Chandler","Howard","Franquette","Lara","Fernor","Rex","Midland","Cisco","Payne","Other"];
 export const DATA_TYPES = ["Yield","Soil Moisture","Soil pH","Pest Count","Kernel Quality","Irrigation Usage","Fertiliser Applied","Temperature","Rainfall","Other"];
 export const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
